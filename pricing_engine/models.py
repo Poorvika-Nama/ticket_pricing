@@ -18,3 +18,14 @@ class Show:
 class BookingRequest:
     show_id: str
     quantities: dict[str, int]
+
+
+@dataclass
+class FestivalDiscount:
+    flat_amount_paise: int
+
+
+@dataclass
+class MemberDiscount:
+    percentage: float
+    cap_paise: int
