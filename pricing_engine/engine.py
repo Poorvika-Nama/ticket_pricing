@@ -108,3 +108,18 @@ class PricingEngine:
             "gst_on_fee": gst_on_fee_paise,
             "grand_total": grand_total_paise,
         }
+
+    def render_receipt(self, breakdown: dict[str, int]) -> str:
+        """Render a final bill breakdown as a human-readable receipt."""
+        labels = (
+            ("Base total", "base_total"),
+            ("Festival discount", "festival_discount"),
+            ("Member discount", "member_discount"),
+            ("Total after discounts", "total_after_discounts"),
+            ("Convenience fee", "convenience_fee"),
+            ("GST on tickets", "gst_on_tickets"),
+            ("GST on fee", "gst_on_fee"),
+        )
+        lines = [f"{label}: {breakdown[key]} paise" for label, key in labels]
+        lines.append(f"Total: {breakdown['grand_total']} paise")
+        return "\n".join(lines)
