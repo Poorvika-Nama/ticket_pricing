@@ -1,4 +1,6 @@
-from .models import BookingRequest, Show
+from decimal import Decimal, ROUND_HALF_UP
+
+from .models import BookingRequest, FestivalDiscount, MemberDiscount, Show
 
 
 class SoldOutError(Exception):
@@ -22,3 +24,36 @@ class PricingEngine:
             tiers[tier_name].price_paise * quantity
             for tier_name, quantity in booking_request.quantities.items()
         )
+
+    def apply_discounts(
+        self,
+        base_total_paise: int,
+        festival_discount: FestivalDiscount | None = None,
+        member_discount: MemberDiscount | None = None,
+    ) -> dict[str, int]:
+        """Apply festival discount first, then capped member discount."""
+        festival_discount_applied = 0
+        remaining = base_total_paise
+
+        if festival_discount is not None:
+            festival_discount_applied = min(
+                festival_discount.flat_amount_paise, remaining
+            )
+            remaining -= festival_discount_applied
+
+        member_discount_applied = 0
+        if member_discount is not None:
+            percentage_discount = (
+                Decimal(str(member_discount.percentage)) * Decimal(remaining) / Decimal(100)
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            member_discount_applied = min(
+                int(percentage_discount), member_discount.cap_paise, remaining
+            )
+            remaining -= member_discount_applied
+
+        return {
+            "base_total": base_total_paise,
+            "festival_discount_applied": festival_discount_applied,
+            "member_discount_applied": member_discount_applied,
+            "total_after_discounts": remaining,
+        }
