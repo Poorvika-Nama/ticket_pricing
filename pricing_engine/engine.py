@@ -20,6 +20,8 @@ class PricingEngine:
         tiers = {tier.name: tier for tier in show.seat_tiers}
 
         for tier_name, quantity in booking_request.quantities.items():
+            if quantity <= 0:
+                raise ValueError(f"Quantity for tier '{tier_name}' must be greater than zero")
             if tier_name not in tiers:
                 raise ValueError(f"Tier '{tier_name}' is not offered on this show")
 
