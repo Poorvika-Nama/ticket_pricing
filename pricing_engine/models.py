@@ -29,3 +29,13 @@ class FestivalDiscount:
 class MemberDiscount:
     percentage: float
     cap_paise: int
+
+
+@dataclass
+class FeeConfig:
+    per_ticket_fee_paise: int
+
+
+@dataclass
+class TaxConfig:
+    gst_rate_percent: float
