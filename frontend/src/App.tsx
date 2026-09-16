@@ -16,7 +16,8 @@ export default function App() {
   useEffect(() => {
     const stored = localStorage.getItem("cinema-imported-tiers");
     if (stored) {
-      try { setImportedTiers(JSON.parse(stored) as SeatTier[]); } catch { localStorage.removeItem("cinema-imported-tiers"); }
+      try { setImportedTiers(JSON.parse(stored) as SeatTier[]); }
+      catch { localStorage.removeItem("cinema-imported-tiers"); }
     }
   }, []);
 
@@ -32,14 +33,11 @@ export default function App() {
     <div className="app-shell">
       <nav className="nav">
         <div className="brand"><span className="brand-icon">C</span><span>Cinema Pricing</span></div>
-        <div className="nav-links">
-          <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>Booking</NavLink>
-          <NavLink to="/import" className={({ isActive }) => isActive ? "active" : ""}>Price import</NavLink>
-        </div>
+        <div className="nav-links"><NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>Booking</NavLink><NavLink to="/import" className={({ isActive }) => isActive ? "active" : ""}>Price import</NavLink></div>
       </nav>
       <Routes>
         <Route path="/" element={<BookingPage tiers={tiers} />} />
-        <Route path="/import" element={<ImportPage />} />
+        <Route path="/import" element={<ImportPage onImported={handleImported} />} />
       </Routes>
     </div>
   );
