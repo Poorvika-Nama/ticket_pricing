@@ -1,6 +1,13 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from .models import BookingRequest, FestivalDiscount, MemberDiscount, Show
+from .models import (
+    BookingRequest,
+    FestivalDiscount,
+    FeeConfig,
+    MemberDiscount,
+    Show,
+    TaxConfig,
+)
 
 
 class SoldOutError(Exception):
@@ -44,7 +51,9 @@ class PricingEngine:
         member_discount_applied = 0
         if member_discount is not None:
             percentage_discount = (
-                Decimal(str(member_discount.percentage)) * Decimal(remaining) / Decimal(100)
+                Decimal(str(member_discount.percentage))
+                * Decimal(remaining)
+                / Decimal(100)
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
             member_discount_applied = min(
                 int(percentage_discount), member_discount.cap_paise, remaining
@@ -56,4 +65,46 @@ class PricingEngine:
             "festival_discount_applied": festival_discount_applied,
             "member_discount_applied": member_discount_applied,
             "total_after_discounts": remaining,
+        }
+
+    def calculate_final_bill(
+        self,
+        discount_breakdown: dict[str, int],
+        ticket_count: int,
+        fee_config: FeeConfig,
+        tax_config: TaxConfig,
+    ) -> dict[str, int]:
+        """Calculate fees and GST using exact paise arithmetic."""
+        convenience_fee_paise = fee_config.per_ticket_fee_paise * ticket_count
+        gst_rate = Decimal(str(tax_config.gst_rate_percent))
+
+        gst_on_tickets_paise = int(
+            (
+                Decimal(discount_breakdown["total_after_discounts"])
+                * gst_rate
+                / Decimal(100)
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        )
+        gst_on_fee_paise = int(
+            (Decimal(convenience_fee_paise) * gst_rate / Decimal(100)).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+
+        grand_total_paise = (
+            discount_breakdown["total_after_discounts"]
+            + convenience_fee_paise
+            + gst_on_tickets_paise
+            + gst_on_fee_paise
+        )
+
+        return {
+            "base_total": discount_breakdown["base_total"],
+            "festival_discount": discount_breakdown["festival_discount_applied"],
+            "member_discount": discount_breakdown["member_discount_applied"],
+            "total_after_discounts": discount_breakdown["total_after_discounts"],
+            "convenience_fee": convenience_fee_paise,
+            "gst_on_tickets": gst_on_tickets_paise,
+            "gst_on_fee": gst_on_fee_paise,
+            "grand_total": grand_total_paise,
         }
