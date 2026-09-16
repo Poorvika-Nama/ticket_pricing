@@ -22,3 +22,26 @@ Useful endpoints:
 - `POST /import-price-list` — clean and report a raw seat-class price list
 
 FastAPI's interactive API documentation is available at `/docs` while the server is running.
+
+## Run the React frontend locally
+
+The Vite + TypeScript frontend lives in `frontend/` and expects the FastAPI server above to be running.
+
+In a second terminal:
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Set the API base URL in `frontend/.env` with:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+The Vite development server will print its local URL (normally `http://localhost:5173`). Keep the backend running with Uvicorn in the first terminal.
+
+The frontend has two routes: `/` for booking and `/import` for CSV price-list import. Imported tiers are persisted in browser `localStorage` and shared with the booking screen; because the existing import API returns prices but does not provide inventory, imported tiers enter the booking list with `0` remaining seats and are visibly disabled until inventory is supplied by a backend show configuration.
