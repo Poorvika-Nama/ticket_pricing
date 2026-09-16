@@ -4,9 +4,11 @@ from pricing_engine.engine import PricingEngine, SoldOutError
 from pricing_engine.models import (
     BookingRequest,
     FestivalDiscount,
+    FeeConfig,
     MemberDiscount,
     SeatTier,
     Show,
+    TaxConfig,
 )
 
 
@@ -124,3 +126,132 @@ def test_member_discount_hits_cap():
         "member_discount_applied": 1500,
         "total_after_discounts": 8500,
     }
+
+
+def test_final_bill_rounding_is_exact():
+    discounts = PricingEngine().apply_discounts(101)
+    bill = PricingEngine().calculate_final_bill(
+        discounts,
+        ticket_count=1,
+        fee_config=FeeConfig(per_ticket_fee_paise=101),
+        tax_config=TaxConfig(gst_rate_percent=18.0),
+    )
+
+    assert bill["gst_on_tickets"] == 18
+    assert bill["gst_on_fee"] == 18
+    assert bill["grand_total"] == 238
+    assert (
+        bill["total_after_discounts"]
+        + bill["convenience_fee"]
+        + bill["gst_on_tickets"]
+        + bill["gst_on_fee"]
+        == bill["grand_total"]
+    )
+
+
+def test_zero_discount_booking_final_bill():
+    engine = PricingEngine()
+    discounts = engine.apply_discounts(10000)
+    bill = engine.calculate_final_bill(
+        discounts,
+        ticket_count=2,
+        fee_config=FeeConfig(per_ticket_fee_paise=100),
+        tax_config=TaxConfig(gst_rate_percent=18.0),
+    )
+
+    assert bill == {
+        "base_total": 10000,
+        "festival_discount": 0,
+        "member_discount": 0,
+        "total_after_discounts": 10000,
+        "convenience_fee": 200,
+        "gst_on_tickets": 1800,
+        "gst_on_fee": 36,
+        "grand_total": 12036,
+    }
+
+
+def test_heavily_discounted_booking():
+    engine = PricingEngine()
+    discounts = engine.apply_discounts(
+        100000,
+        FestivalDiscount(flat_amount_paise=70000),
+        MemberDiscount(percentage=50.0, cap_paise=10000),
+    )
+    bill = engine.calculate_final_bill(
+        discounts,
+        ticket_count=4,
+        fee_config=FeeConfig(per_ticket_fee_paise=250),
+        tax_config=TaxConfig(gst_rate_percent=18.0),
+    )
+
+    assert bill["total_after_discounts"] == 20000
+    assert bill["convenience_fee"] == 1000
+    assert bill["gst_on_tickets"] == 3600
+    assert bill["gst_on_fee"] == 180
+    assert bill["grand_total"] == 24780
+
+
+def test_large_multi_tier_booking():
+    engine = PricingEngine()
+    show = Show(
+        id="large-show",
+        seat_tiers=[
+            SeatTier("Silver", 10000, 500),
+            SeatTier("Gold", 20000, 500),
+            SeatTier("Recliner", 35000, 200),
+        ],
+    )
+    booking = BookingRequest(
+        show_id="large-show",
+        quantities={"Silver": 100, "Gold": 75, "Recliner": 25},
+    )
+    base = engine.calculate_base_total(show, booking)
+    discounts = engine.apply_discounts(
+        base,
+        FestivalDiscount(flat_amount_paise=50000),
+        MemberDiscount(percentage=10.0, cap_paise=100000),
+    )
+    bill = engine.calculate_final_bill(
+        discounts,
+        ticket_count=200,
+        fee_config=FeeConfig(per_ticket_fee_paise=50),
+        tax_config=TaxConfig(gst_rate_percent=18.0),
+    )
+
+    assert bill["base_total"] == 2875000
+    assert bill["total_after_discounts"] == 2542500
+    assert bill["grand_total"] == 3032100
+    assert (
+        bill["total_after_discounts"]
+        + bill["convenience_fee"]
+        + bill["gst_on_tickets"]
+        + bill["gst_on_fee"]
+        == bill["grand_total"]
+    )
+
+
+def test_receipt_is_human_readable_and_ends_with_total():
+    engine = PricingEngine()
+    discounts = engine.apply_discounts(10000)
+    bill = engine.calculate_final_bill(
+        discounts,
+        ticket_count=1,
+        fee_config=FeeConfig(per_ticket_fee_paise=100),
+        tax_config=TaxConfig(gst_rate_percent=18.0),
+    )
+
+    receipt = engine.render_receipt(bill)
+    lines = receipt.splitlines()
+
+    assert lines == [
+        "Base total: 10000 paise",
+        "Festival discount: 0 paise",
+        "Member discount: 0 paise",
+        "Total after discounts: 10000 paise",
+        "Convenience fee: 100 paise",
+        "GST on tickets: 1800 paise",
+        "GST on fee: 18 paise",
+        "Total: 11918 paise",
+    ]
+    assert lines[-1] == "Total: 11918 paise"
