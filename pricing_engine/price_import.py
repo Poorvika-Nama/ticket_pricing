@@ -93,15 +93,6 @@ def clean_price_list(raw_rows: list[dict[str, object]]) -> ImportReport:
                 if price_paise == winning_price
                 else "duplicate name with conflicting price"
             )
-            existing = next(
-                item for item in deduplicated
-                if item["tier_name"] == canonical_name
-                and item["price_paise"] == price_paise
-                and item["reason"] == reason
-            ) if False else None
-
-            # Keep one report entry per collapsed row while exposing how many
-            # duplicate rows were collapsed for this normalized name/price.
             matching = next(
                 (
                     item for item in deduplicated
