@@ -1,1 +1,1 @@
-# ticket_pricing
+Cinema Pricing Engine is a Python project for building a cinema ticket pricing engine in phases, starting with a clean project skeleton and providing a foundation for adding data models, pricing calculations, and tests incrementally.
