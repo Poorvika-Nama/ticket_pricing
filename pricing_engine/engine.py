@@ -123,3 +123,28 @@ class PricingEngine:
         lines = [f"{label}: {breakdown[key]} paise" for label, key in labels]
         lines.append(f"Total: {breakdown['grand_total']} paise")
         return "\n".join(lines)
+
+
+def price_booking(
+    show: Show,
+    booking_request: BookingRequest,
+    festival_discount: FestivalDiscount | None,
+    member_discount: MemberDiscount | None,
+    fee_config: FeeConfig,
+    tax_config: TaxConfig,
+) -> dict[str, int]:
+    """Price a booking through the complete pricing pipeline."""
+    engine = PricingEngine()
+    base_total = engine.calculate_base_total(show, booking_request)
+    discount_breakdown = engine.apply_discounts(
+        base_total,
+        festival_discount=festival_discount,
+        member_discount=member_discount,
+    )
+    ticket_count = sum(booking_request.quantities.values())
+    return engine.calculate_final_bill(
+        discount_breakdown,
+        ticket_count=ticket_count,
+        fee_config=fee_config,
+        tax_config=tax_config,
+    )
