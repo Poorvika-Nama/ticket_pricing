@@ -1,13 +1,22 @@
 import type { ImportReportData, Receipt, SeatTier } from "./types";
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+// In development, Vite proxies /api to the local FastAPI server.
+// Set VITE_API_BASE_URL only when the API is hosted somewhere else.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 async function request<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init.headers || {}) },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(init.headers || {}) },
+    });
+  } catch {
+    throw new Error(
+      "Unable to connect to the pricing API. Make sure FastAPI is running on http://127.0.0.1:8000."
+    );
+  }
+
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
     try {
