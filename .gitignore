@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimized DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,3 +29,8 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
