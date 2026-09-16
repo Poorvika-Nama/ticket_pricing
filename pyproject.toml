@@ -16,5 +16,8 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest", "httpx"]
 
+[tool.setuptools.packages.find]
+include = ["pricing_engine*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
